@@ -12,8 +12,13 @@ create table if not exists feedbacks (
   data date not null,
   nota integer not null check (nota between 1 and 5),
   texto text,
+  origem text check (origem in ('ifood', '99food')),
   criado_em timestamptz default now()
 );
+
+-- Se você já rodou este script antes e está apenas atualizando,
+-- rode só a linha abaixo em vez do create table inteiro:
+-- alter table feedbacks add column if not exists origem text check (origem in ('ifood', '99food'));
 
 alter table lojas enable row level security;
 alter table feedbacks enable row level security;
