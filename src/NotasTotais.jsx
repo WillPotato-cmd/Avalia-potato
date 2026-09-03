@@ -7,6 +7,7 @@ export default function NotasTotais({ lojas, feedbacks, notasSecas }) {
 
   const [inicio, setInicio] = useState(primeiroDia)
   const [fim, setFim] = useState(ultimoDia)
+  const [origemFiltro, setOrigemFiltro] = useState('ambos')
   const [copiado, setCopiado] = useState(false)
 
   if (lojas.length === 0) {
@@ -25,11 +26,18 @@ export default function NotasTotais({ lojas, feedbacks, notasSecas }) {
     return { first, last }
   }
 
-  const itemsNoPeriodo = feedbacks.filter(f => f.data >= inicio && f.data <= fim)
-  const secasNoPeriodo = notasSecas.filter(n => {
+  let itemsNoPeriodo = feedbacks.filter(f => f.data >= inicio && f.data <= fim)
+  let secasNoPeriodo = notasSecas.filter(n => {
     const { first, last } = monthRangeDates(n.mes)
     return last >= inicio && first <= fim
   })
+
+  if (origemFiltro !== 'ambos') {
+    itemsNoPeriodo = itemsNoPeriodo.filter(f => f.origem === origemFiltro)
+    secasNoPeriodo = secasNoPeriodo.filter(n => n.origem === origemFiltro)
+  }
+
+  const origemLabel = origemFiltro === 'ifood' ? ' (somente iFood)' : origemFiltro === '99food' ? ' (somente 99Food)' : ''
 
   const regioesMap = {}
   const ordemRegioes = []
@@ -49,7 +57,7 @@ export default function NotasTotais({ lojas, feedbacks, notasSecas }) {
       )
       if (lojasDaRegiao.length === 0) return
 
-      texto += `${regiao}\n`
+      texto += `${regiao}${origemLabel}\n`
       texto += `Agora a média mensal com base em todas as avaliações _(*com* e *sem comentários*)_ entre ${fmtDataBR(inicio)} e ${fmtDataBR(fim)}:\n`
 
       const linhasLojas = []
@@ -96,15 +104,23 @@ export default function NotasTotais({ lojas, feedbacks, notasSecas }) {
           <label>Até</label>
           <input type="date" value={fim} onChange={e => setFim(e.target.value)} />
         </div>
+        <div>
+          <label>Origem</label>
+          <select value={origemFiltro} onChange={e => setOrigemFiltro(e.target.value)}>
+            <option value="ambos">Ambos (iFood + 99Food)</option>
+            <option value="ifood">Somente iFood</option>
+            <option value="99food">Somente 99Food</option>
+          </select>
+        </div>
       </div>
 
       {blocos.length === 0 ? (
-        <p className="empty">Nenhum feedback ou nota registrada nesse período.</p>
+        <p className="empty">Nenhum feedback ou nota registrada nesse período{origemFiltro !== 'ambos' ? ' para essa origem' : ''}.</p>
       ) : (
         <div style={{ marginTop: 16 }}>
           {blocos.map(b => (
             <div key={b.regiao}>
-              <h2 style={{ marginTop: 20 }}>{b.regiao}</h2>
+              <h2 style={{ marginTop: 20 }}>{b.regiao}{origemLabel}</h2>
               <table>
                 <thead><tr><th>Loja</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>Média</th></tr></thead>
                 <tbody>
