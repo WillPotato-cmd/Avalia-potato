@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { supabase } from './supabaseClient'
 
+const REGIOES = ['Alto Tietê', 'Vale do Paraíba']
+
 export default function Lojas({ lojas, feedbacks, onChange }) {
   const [nome, setNome] = useState('')
   const [regiao, setRegiao] = useState('')
@@ -8,7 +10,7 @@ export default function Lojas({ lojas, feedbacks, onChange }) {
   async function addLoja() {
     const val = nome.trim()
     if (!val) return
-    const { error } = await supabase.from('lojas').insert({ nome: val, regiao: regiao.trim() || null })
+    const { error } = await supabase.from('lojas').insert({ nome: val, regiao: regiao || null })
     if (error) { alert('Erro ao salvar loja: ' + error.message); return }
     setNome('')
     setRegiao('')
@@ -23,7 +25,7 @@ export default function Lojas({ lojas, feedbacks, onChange }) {
   }
 
   async function updateRegiao(id, novaRegiao) {
-    const { error } = await supabase.from('lojas').update({ regiao: novaRegiao.trim() || null }).eq('id', id)
+    const { error } = await supabase.from('lojas').update({ regiao: novaRegiao || null }).eq('id', id)
     if (error) { alert('Erro ao atualizar região: ' + error.message); return }
     onChange()
   }
@@ -40,13 +42,10 @@ export default function Lojas({ lojas, feedbacks, onChange }) {
             onChange={e => setNome(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') addLoja() }}
           />
-          <input
-            type="text"
-            placeholder="Região (opcional, ex: Alto Tietê)"
-            value={regiao}
-            onChange={e => setRegiao(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') addLoja() }}
-          />
+          <select value={regiao} onChange={e => setRegiao(e.target.value)}>
+            <option value="">Sem região</option>
+            {REGIOES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
           <button className="btn-primary" onClick={addLoja}>Adicionar</button>
         </div>
       </div>
@@ -64,13 +63,14 @@ export default function Lojas({ lojas, feedbacks, onChange }) {
                 <tr key={l.id}>
                   <td>{l.nome}</td>
                   <td>
-                    <input
-                      type="text"
-                      defaultValue={l.regiao || ''}
-                      placeholder="Sem região"
+                    <select
+                      value={l.regiao || ''}
                       style={{ padding: '5px 8px', fontSize: 13 }}
-                      onBlur={e => { if (e.target.value !== (l.regiao || '')) updateRegiao(l.id, e.target.value) }}
-                    />
+                      onChange={e => updateRegiao(l.id, e.target.value)}
+                    >
+                      <option value="">Sem região</option>
+                      {REGIOES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
                   </td>
                   <td>{count}</td>
                   <td><button className="icon-btn" onClick={() => deleteLoja(l.id)}>Excluir</button></td>

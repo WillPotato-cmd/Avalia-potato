@@ -29,10 +29,12 @@ create table if not exists notas_secas (
   id uuid primary key default gen_random_uuid(),
   loja_id uuid references lojas(id) on delete set null,
   mes text not null, -- formato 'YYYY-MM'
+  origem text check (origem in ('ifood', '99food')),
   nota integer not null check (nota between 1 and 5),
   quantidade integer not null check (quantidade > 0),
   criado_em timestamptz default now()
 );
+alter table notas_secas add column if not exists origem text check (origem in ('ifood', '99food'));
 
 create table if not exists vendas_diarias (
   id uuid primary key default gen_random_uuid(),
