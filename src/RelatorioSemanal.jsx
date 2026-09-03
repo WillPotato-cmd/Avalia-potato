@@ -28,13 +28,26 @@ export default function RelatorioSemanal({ lojas, feedbacks }) {
   let media = 0
   if (items.length > 0) {
     media = items.reduce((s, f) => s + f.nota, 0) / items.length
-    texto = `Relatório de feedbacks — ${loja?.nome}\n`
-    texto += `Semana: ${fmtDate(start)} a ${fmtDate(end)}\n\n`
-    items.forEach((f, i) => {
+    const mediaStr = media.toFixed(1).replace('.', ',')
+    texto = `"${loja?.nome}":\n\n`
+    items.forEach((f) => {
       const d = new Date(f.data + 'T00:00:00')
-      texto += `${i + 1}. ${fmtDate(d)} — Nota ${f.nota}${f.texto ? `\n"${f.texto}"` : ' (sem comentário)'}\n\n`
+      const origemLabel = f.origem === 'ifood' ? 'iFood' : f.origem === '99food' ? '99food' : null
+      const origemStr = origemLabel ? ` [${origemLabel}]` : ''
+      const clienteNome = f.cliente ? f.cliente : 'Cliente'
+      if (f.pedido) {
+        texto += `🧾 ${f.pedido} | 📅 ${fmtDate(d)}\n`
+      } else {
+        texto += `📅 ${fmtDate(d)}\n`
+      }
+      texto += `🧑🏽 *${clienteNome}${origemStr}* | ⭐ ${f.nota}\n`
+      if (f.texto) {
+        texto += `🗣️ _${f.texto}_\n\n`
+      } else {
+        texto += `\n`
+      }
     })
-    texto += `Média da semana: ${media.toFixed(2)} (${items.length} avaliação${items.length > 1 ? 'ões' : ''})`
+    texto += `> *Média das notas: ${mediaStr}*`
   }
 
   function copiar() {

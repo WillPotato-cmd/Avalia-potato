@@ -3,14 +3,22 @@ import { supabase } from './supabaseClient'
 import Login from './Login'
 import Lojas from './Lojas'
 import NovoFeedback from './NovoFeedback'
+import NotasSecas from './NotasSecas'
+import NotasTotais from './NotasTotais'
 import RelatorioSemanal from './RelatorioSemanal'
 import PanoramaMensal from './PanoramaMensal'
+import VendasDiarias from './VendasDiarias'
+import OperacaoMensal from './OperacaoMensal'
+import RelatorioPPTX from './RelatorioPPTX'
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [loadingSession, setLoadingSession] = useState(true)
   const [lojas, setLojas] = useState([])
   const [feedbacks, setFeedbacks] = useState([])
+  const [notasSecas, setNotasSecas] = useState([])
+  const [vendasDiarias, setVendasDiarias] = useState([])
+  const [operacaoMensal, setOperacaoMensal] = useState([])
   const [tab, setTab] = useState('novo')
 
   useEffect(() => {
@@ -25,10 +33,18 @@ export default function App() {
   }, [])
 
   const loadData = useCallback(async () => {
-    const { data: lojasData } = await supabase.from('lojas').select('*').order('nome')
-    const { data: feedbacksData } = await supabase.from('feedbacks').select('*').order('data', { ascending: false })
-    setLojas(lojasData || [])
-    setFeedbacks(feedbacksData || [])
+    const [lojasRes, feedbacksRes, notasSecasRes, vendasRes, operacaoRes] = await Promise.all([
+      supabase.from('lojas').select('*').order('nome'),
+      supabase.from('feedbacks').select('*').order('data', { ascending: false }),
+      supabase.from('notas_secas').select('*'),
+      supabase.from('vendas_diarias').select('*'),
+      supabase.from('operacao_mensal').select('*')
+    ])
+    setLojas(lojasRes.data || [])
+    setFeedbacks(feedbacksRes.data || [])
+    setNotasSecas(notasSecasRes.data || [])
+    setVendasDiarias(vendasRes.data || [])
+    setOperacaoMensal(operacaoRes.data || [])
   }, [])
 
   useEffect(() => {
@@ -37,6 +53,18 @@ export default function App() {
 
   if (loadingSession) return null
   if (!session) return <Login />
+
+  const abas = [
+    ['novo', 'Novo feedback'],
+    ['notassecas', 'Notas secas'],
+    ['lojas', 'Lojas'],
+    ['semanal', 'Relatório semanal'],
+    ['mensal', 'Panorama mensal'],
+    ['notastotais', 'Notas totais'],
+    ['vendasdiarias', 'Vendas diárias'],
+    ['opmensal', 'Operação mensal'],
+    ['pptx', 'Relatório PPTX']
+  ]
 
   return (
     <div className="app">
@@ -49,16 +77,20 @@ export default function App() {
       </div>
 
       <div className="tabs">
-        <button className={`tab ${tab === 'novo' ? 'active' : ''}`} onClick={() => setTab('novo')}>Novo feedback</button>
-        <button className={`tab ${tab === 'lojas' ? 'active' : ''}`} onClick={() => setTab('lojas')}>Lojas</button>
-        <button className={`tab ${tab === 'semanal' ? 'active' : ''}`} onClick={() => setTab('semanal')}>Relatório semanal</button>
-        <button className={`tab ${tab === 'mensal' ? 'active' : ''}`} onClick={() => setTab('mensal')}>Panorama mensal</button>
+        {abas.map(([id, label]) => (
+          <button key={id} className={`tab ${tab === id ? 'active' : ''}`} onClick={() => setTab(id)}>{label}</button>
+        ))}
       </div>
 
       {tab === 'novo' && <NovoFeedback lojas={lojas} feedbacks={feedbacks} onChange={loadData} />}
+      {tab === 'notassecas' && <NotasSecas lojas={lojas} notasSecas={notasSecas} onChange={loadData} />}
       {tab === 'lojas' && <Lojas lojas={lojas} feedbacks={feedbacks} onChange={loadData} />}
       {tab === 'semanal' && <RelatorioSemanal lojas={lojas} feedbacks={feedbacks} />}
       {tab === 'mensal' && <PanoramaMensal lojas={lojas} feedbacks={feedbacks} />}
+      {tab === 'notastotais' && <NotasTotais lojas={lojas} feedbacks={feedbacks} notasSecas={notasSecas} />}
+      {tab === 'vendasdiarias' && <VendasDiarias lojas={lojas} vendasDiarias={vendasDiarias} onChange={loadData} />}
+      {tab === 'opmensal' && <OperacaoMensal lojas={lojas} operacaoMensal={operacaoMensal} onChange={loadData} />}
+      {tab === 'pptx' && <RelatorioPPTX lojas={lojas} vendasDiarias={vendasDiarias} operacaoMensal={operacaoMensal} />}
     </div>
   )
 }

@@ -40,6 +40,8 @@ export default function PanoramaMensal({ lojas, feedbacks }) {
     mediaGeral = itemsDoMes.reduce((s, f) => s + f.nota, 0) / totalAvaliacoes
     const comTexto = itemsDoMes.filter(f => f.texto).length
     const semTexto = totalAvaliacoes - comTexto
+    const doIfood = itemsDoMes.filter(f => f.origem === 'ifood').length
+    const do99food = itemsDoMes.filter(f => f.origem === '99food').length
 
     texto = `Panorama mensal — ${loja?.nome}\n`
     texto += `Mês: ${monthLabel(mk)}\n\n`
@@ -48,6 +50,7 @@ export default function PanoramaMensal({ lojas, feedbacks }) {
       texto += `Semana ${i + 1} (${fmtDate(r.start)} a ${fmtDate(r.end)}): média ${w.media.toFixed(2)} — ${w.count} avaliação(ões)\n`
     })
     texto += `\nTotal de avaliações no mês: ${totalAvaliacoes} (${comTexto} com comentário, ${semTexto} só com nota)\n`
+    texto += `Por plataforma: ${doIfood} do iFood, ${do99food} do 99Food\n`
     texto += `Média geral do mês: ${mediaGeral.toFixed(2)}`
   }
 
