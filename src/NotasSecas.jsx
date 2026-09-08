@@ -20,6 +20,14 @@ export default function NotasSecas({ lojas, notasSecas, onChange }) {
   const [qtd, setQtd] = useState(1)
   const [msg, setMsg] = useState(false)
 
+  const [filtroMes, setFiltroMes] = useState('')
+  const [filtroLoja, setFiltroLoja] = useState('')
+  const [filtroOrigem, setFiltroOrigem] = useState('')
+  const [filtroNota, setFiltroNota] = useState('')
+  const [filtroQtd, setFiltroQtd] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const ITENS_POR_PAGINA = 10
+
   const [relLojaId, setRelLojaId] = useState(lojas[0]?.id || '')
   const [relMes, setRelMes] = useState(currentMonthValue())
   const [copiado, setCopiado] = useState(false)
@@ -48,9 +56,20 @@ export default function NotasSecas({ lojas, notasSecas, onChange }) {
     onChange()
   }
 
-  const recentes = [...notasSecas]
-    .sort((a, b) => b.mes.localeCompare(a.mes) || new Date(b.criado_em) - new Date(a.criado_em))
-    .slice(0, 10)
+  const mesesDisponiveis = [...new Set(notasSecas.map(n => n.mes))].sort().reverse()
+
+  let filtrados = [...notasSecas]
+  if (filtroMes) filtrados = filtrados.filter(n => n.mes === filtroMes)
+  if (filtroLoja) filtrados = filtrados.filter(n => n.loja_id === filtroLoja)
+  if (filtroOrigem) filtrados = filtrados.filter(n => n.origem === filtroOrigem)
+  if (filtroNota) filtrados = filtrados.filter(n => n.nota === parseInt(filtroNota, 10))
+  if (filtroQtd !== '') filtrados = filtrados.filter(n => n.quantidade === parseInt(filtroQtd, 10))
+  filtrados.sort((a, b) => b.mes.localeCompare(a.mes) || new Date(b.criado_em) - new Date(a.criado_em))
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / ITENS_POR_PAGINA))
+  const paginaAtual = Math.min(Math.max(1, pagina), totalPaginas)
+  const inicioIdx = (paginaAtual - 1) * ITENS_POR_PAGINA
+  const paginaItens = filtrados.slice(inicioIdx, inicioIdx + ITENS_POR_PAGINA)
 
   const relLojaAtual = relLojaId || lojas[0].id
   const relLoja = lojas.find(l => l.id === relLojaAtual)
@@ -113,12 +132,48 @@ export default function NotasSecas({ lojas, notasSecas, onChange }) {
         <button className="btn-primary" style={{ marginTop: 14 }} onClick={salvar}>Adicionar</button>
         {msg && <p className="copied">Lançamento adicionado.</p>}
 
-        <h2 style={{ marginTop: 28 }}>Lançamentos recentes</h2>
+        <h2 style={{ marginTop: 28 }}>Lançamentos</h2>
+        <div className="row">
+          <div>
+            <label>Filtrar por mês</label>
+            <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setPagina(1) }}>
+              <option value="">Todos os meses</option>
+              {mesesDisponiveis.map(mk => <option key={mk} value={mk}>{monthLabelShort(mk)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Filtrar por loja</label>
+            <select value={filtroLoja} onChange={e => { setFiltroLoja(e.target.value); setPagina(1) }}>
+              <option value="">Todas as lojas</option>
+              {lojas.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Filtrar por origem</label>
+            <select value={filtroOrigem} onChange={e => { setFiltroOrigem(e.target.value); setPagina(1) }}>
+              <option value="">Todas</option>
+              <option value="ifood">iFood</option>
+              <option value="99food">99Food</option>
+            </select>
+          </div>
+          <div>
+            <label>Filtrar por nota</label>
+            <select value={filtroNota} onChange={e => { setFiltroNota(e.target.value); setPagina(1) }}>
+              <option value="">Todas</option>
+              <option value="5">5</option><option value="4">4</option><option value="3">3</option>
+              <option value="2">2</option><option value="1">1</option>
+            </select>
+          </div>
+          <div>
+            <label>Filtrar por quantidade</label>
+            <input type="number" min="0" placeholder="Exata" value={filtroQtd} onChange={e => { setFiltroQtd(e.target.value); setPagina(1) }} />
+          </div>
+        </div>
         <table>
           <thead><tr><th>Mês</th><th>Loja</th><th>Origem</th><th>Nota</th><th>Quantidade</th><th></th></tr></thead>
           <tbody>
-            {recentes.length === 0 && <tr><td colSpan={6} className="empty">Nenhum lançamento ainda.</td></tr>}
-            {recentes.map(n => {
+            {paginaItens.length === 0 && <tr><td colSpan={6} className="empty">Nenhum lançamento encontrado com esses filtros.</td></tr>}
+            {paginaItens.map(n => {
               const loja = lojas.find(l => l.id === n.loja_id)
               return (
                 <tr key={n.id}>
@@ -133,6 +188,11 @@ export default function NotasSecas({ lojas, notasSecas, onChange }) {
             })}
           </tbody>
         </table>
+        <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+          <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPagina(p => p - 1)}>← Anterior</button>
+          <span className="muted">Página {paginaAtual} de {totalPaginas} ({filtrados.length} lançamento(s))</span>
+          <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Próxima →</button>
+        </div>
       </div>
 
       <div className="card">

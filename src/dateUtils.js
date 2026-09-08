@@ -102,22 +102,27 @@ export function parseIfoodText(raw) {
 }
 
 export function parse99FoodText(raw) {
+  // Formato real: linha 1 = nome do cliente, linha 2 = "DD/MM/AAAA HH:MM", restante = comentário.
   const text = raw.replace(/\r/g, '').trim()
   const result = { pedido: '', data: '', nota: '', cliente: '', texto: '' }
+  const linhas = text.split('\n').map(l => l.trim()).filter(l => l)
 
-  const pedidoMatch = text.match(/pedido\s*[:#]?\s*(\d{3,})/i)
-  if (pedidoMatch) result.pedido = pedidoMatch[1]
+  let dataIdx = -1, dataEncontrada = null
+  for (let i = 0; i < linhas.length; i++) {
+    const m = linhas[i].match(/^(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}$/)
+    if (m) { dataIdx = i; dataEncontrada = m[1]; break }
+  }
 
-  const dataMatch = text.match(/(\d{2}\/\d{2}\/\d{4})/)
-  if (dataMatch) result.data = brDateToISO(dataMatch[1])
+  if (dataIdx >= 0) {
+    result.cliente = linhas.slice(0, dataIdx).join(' ').trim()
+    result.data = brDateToISO(dataEncontrada)
+    result.texto = linhas.slice(dataIdx + 1).join('\n').trim()
+  } else {
+    const m2 = text.match(/(\d{2}\/\d{2}\/\d{4})/)
+    if (m2) result.data = brDateToISO(m2[1])
+    result.texto = text
+  }
 
-  const notaMatch = text.match(/nota\s*[:]?\s*(\d)/i)
-  if (notaMatch) result.nota = notaMatch[1]
-
-  const clienteMatch = text.match(/^([^\n]{2,40})$/m)
-  if (clienteMatch) result.cliente = clienteMatch[1].trim()
-
-  result.texto = text
   return result
 }
 
@@ -154,4 +159,19 @@ export function parseMesLabel(str, anoPadrao) {
     }
   }
   return null
+}
+
+export function parseMotivosString(str) {
+  if (!str) return []
+  return str.split(';').map(s => s.trim()).filter(Boolean).map(par => {
+    const idx = par.lastIndexOf(':')
+    if (idx === -1) return { motivo: par, quantidade: 1 }
+    const motivo = par.slice(0, idx).trim()
+    const qtd = parseInt(par.slice(idx + 1).trim(), 10) || 0
+    return { motivo, quantidade: qtd }
+  }).filter(m => m.motivo)
+}
+
+export function motivosToString(arr) {
+  return (arr || []).map(m => `${m.motivo}:${m.quantidade}`).join('; ')
 }

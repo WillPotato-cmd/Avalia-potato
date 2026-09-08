@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { supabase } from './supabaseClient'
-import { todayISO, fmtDate, parseSemanaLabel, parseValorMonetario } from './dateUtils'
+import { todayISO, fmtDate, monthKey, monthLabelShort, parseSemanaLabel, parseValorMonetario } from './dateUtils'
 
 function OrigemTag({ origem }) {
   if (!origem) return null
@@ -22,6 +22,12 @@ export default function VendasDiarias({ lojas, vendasDiarias, onChange }) {
   const [impAno, setImpAno] = useState(new Date().getFullYear())
   const [colar, setColar] = useState('')
   const [impMsg, setImpMsg] = useState({ text: '', ok: true })
+
+  const [filtroMes, setFiltroMes] = useState('')
+  const [filtroLoja, setFiltroLoja] = useState('')
+  const [filtroCanal, setFiltroCanal] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const ITENS_POR_PAGINA = 31
 
   if (lojas.length === 0) {
     return <div className="card"><p className="empty">Cadastre pelo menos uma loja na aba "Lojas" antes de lançar dados de operação.</p></div>
@@ -82,9 +88,18 @@ export default function VendasDiarias({ lojas, vendasDiarias, onChange }) {
     onChange()
   }
 
-  const recentes = [...vendasDiarias]
-    .sort((a, b) => b.data.localeCompare(a.data) || new Date(b.criado_em) - new Date(a.criado_em))
-    .slice(0, 10)
+  const mesesDisponiveis = [...new Set(vendasDiarias.map(o => monthKey(o.data)))].sort().reverse()
+
+  let filtrados = [...vendasDiarias]
+  if (filtroMes) filtrados = filtrados.filter(o => monthKey(o.data) === filtroMes)
+  if (filtroLoja) filtrados = filtrados.filter(o => o.loja_id === filtroLoja)
+  if (filtroCanal) filtrados = filtrados.filter(o => o.canal === filtroCanal)
+  filtrados.sort((a, b) => b.data.localeCompare(a.data) || new Date(b.criado_em) - new Date(a.criado_em))
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / ITENS_POR_PAGINA))
+  const paginaAtual = Math.min(Math.max(1, pagina), totalPaginas)
+  const inicioIdx = (paginaAtual - 1) * ITENS_POR_PAGINA
+  const paginaItens = filtrados.slice(inicioIdx, inicioIdx + ITENS_POR_PAGINA)
 
   return (
     <div>
@@ -125,12 +140,36 @@ export default function VendasDiarias({ lojas, vendasDiarias, onChange }) {
         <button className="btn-primary" style={{ marginTop: 14 }} onClick={salvar}>Adicionar</button>
         {msg && <p className="copied">Lançamento adicionado.</p>}
 
-        <h2 style={{ marginTop: 28 }}>Lançamentos recentes</h2>
+        <h2 style={{ marginTop: 28 }}>Lançamentos</h2>
+        <div className="row">
+          <div>
+            <label>Filtrar por mês</label>
+            <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setPagina(1) }}>
+              <option value="">Todos os meses</option>
+              {mesesDisponiveis.map(mk => <option key={mk} value={mk}>{monthLabelShort(mk)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Filtrar por loja</label>
+            <select value={filtroLoja} onChange={e => { setFiltroLoja(e.target.value); setPagina(1) }}>
+              <option value="">Todas as lojas</option>
+              {lojas.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>Filtrar por canal</label>
+            <select value={filtroCanal} onChange={e => { setFiltroCanal(e.target.value); setPagina(1) }}>
+              <option value="">Todos</option>
+              <option value="ifood">iFood</option>
+              <option value="99food">99Food</option>
+            </select>
+          </div>
+        </div>
         <table>
           <thead><tr><th>Data</th><th>Loja</th><th>Canal</th><th>Pedidos</th><th>Vendas</th><th>Invest.</th><th></th></tr></thead>
           <tbody>
-            {recentes.length === 0 && <tr><td colSpan={7} className="empty">Nenhum lançamento ainda.</td></tr>}
-            {recentes.map(o => {
+            {paginaItens.length === 0 && <tr><td colSpan={7} className="empty">Nenhum lançamento encontrado com esses filtros.</td></tr>}
+            {paginaItens.map(o => {
               const loja = lojas.find(l => l.id === o.loja_id)
               const d = new Date(o.data + 'T00:00:00')
               return (
@@ -147,6 +186,11 @@ export default function VendasDiarias({ lojas, vendasDiarias, onChange }) {
             })}
           </tbody>
         </table>
+        <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+          <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPagina(p => p - 1)}>← Anterior</button>
+          <span className="muted">Página {paginaAtual} de {totalPaginas} ({filtrados.length} lançamento(s))</span>
+          <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Próxima →</button>
+        </div>
       </div>
 
       <div className="card">

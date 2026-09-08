@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { supabase } from './supabaseClient'
-import { todayISO, fmtDate, parseIfoodText, parse99FoodText } from './dateUtils'
+import { todayISO, fmtDate, monthKey, monthLabelShort, parseIfoodText, parse99FoodText } from './dateUtils'
 
 function ScoreBadge({ n }) {
   return <span className={`badge b${n}`}>{n}</span>
@@ -23,6 +23,10 @@ export default function NovoFeedback({ lojas, feedbacks, onChange }) {
   const [colar, setColar] = useState('')
   const [autoMsg, setAutoMsg] = useState({ text: '', ok: true })
   const [msg, setMsg] = useState(false)
+  const [filtroLoja, setFiltroLoja] = useState('')
+  const [filtroMes, setFiltroMes] = useState('')
+  const [pagina, setPagina] = useState(1)
+  const ITENS_POR_PAGINA = 10
 
   if (lojas.length === 0) {
     return <div className="card"><p className="empty">Cadastre pelo menos uma loja na aba "Lojas" antes de lançar feedbacks.</p></div>
@@ -66,9 +70,17 @@ export default function NovoFeedback({ lojas, feedbacks, onChange }) {
     onChange()
   }
 
-  const recentes = [...feedbacks]
-    .sort((a, b) => b.data.localeCompare(a.data) || new Date(b.criado_em) - new Date(a.criado_em))
-    .slice(0, 8)
+  const mesesDisponiveis = [...new Set(feedbacks.map(f => monthKey(f.data)))].sort().reverse()
+
+  let filtrados = [...feedbacks]
+  if (filtroLoja) filtrados = filtrados.filter(f => f.loja_id === filtroLoja)
+  if (filtroMes) filtrados = filtrados.filter(f => monthKey(f.data) === filtroMes)
+  filtrados.sort((a, b) => b.data.localeCompare(a.data) || new Date(b.criado_em) - new Date(a.criado_em))
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / ITENS_POR_PAGINA))
+  const paginaAtual = Math.min(Math.max(1, pagina), totalPaginas)
+  const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA
+  const paginaItens = filtrados.slice(inicio, inicio + ITENS_POR_PAGINA)
 
   return (
     <div className="card">
@@ -130,14 +142,30 @@ export default function NovoFeedback({ lojas, feedbacks, onChange }) {
       <button className="btn-primary" style={{ marginTop: 14 }} onClick={salvar}>Adicionar feedback</button>
       {msg && <p className="copied">Feedback adicionado.</p>}
 
-      <h2 style={{ marginTop: 28 }}>Últimos lançamentos</h2>
+      <h2 style={{ marginTop: 28 }}>Histórico de feedbacks</h2>
+      <div className="row">
+        <div>
+          <label>Filtrar por loja</label>
+          <select value={filtroLoja} onChange={e => { setFiltroLoja(e.target.value); setPagina(1) }}>
+            <option value="">Todas as lojas</option>
+            {lojas.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
+          </select>
+        </div>
+        <div>
+          <label>Filtrar por mês</label>
+          <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setPagina(1) }}>
+            <option value="">Todos os meses</option>
+            {mesesDisponiveis.map(mk => <option key={mk} value={mk}>{monthLabelShort(mk)}</option>)}
+          </select>
+        </div>
+      </div>
       <table>
         <thead><tr><th>Data</th><th>Loja</th><th>Cliente</th><th>Origem</th><th>Nota</th><th>Comentário</th><th></th></tr></thead>
         <tbody>
-          {recentes.length === 0 && (
-            <tr><td colSpan={7} className="empty">Nenhum feedback ainda.</td></tr>
+          {paginaItens.length === 0 && (
+            <tr><td colSpan={7} className="empty">Nenhum feedback encontrado com esses filtros.</td></tr>
           )}
-          {recentes.map(f => {
+          {paginaItens.map(f => {
             const loja = lojas.find(l => l.id === f.loja_id)
             const d = new Date(f.data + 'T00:00:00')
             return (
@@ -154,6 +182,11 @@ export default function NovoFeedback({ lojas, feedbacks, onChange }) {
           })}
         </tbody>
       </table>
+      <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+        <button className="btn-secondary" disabled={paginaAtual <= 1} onClick={() => setPagina(p => p - 1)}>← Anterior</button>
+        <span className="muted">Página {paginaAtual} de {totalPaginas} ({filtrados.length} feedback(s))</span>
+        <button className="btn-secondary" disabled={paginaAtual >= totalPaginas} onClick={() => setPagina(p => p + 1)}>Próxima →</button>
+      </div>
     </div>
   )
 }

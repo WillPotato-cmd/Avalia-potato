@@ -92,23 +92,57 @@ export default function RelatorioPPTX({ lojas, vendasDiarias, operacaoMensal }) 
 
     const s5 = pptx.addSlide()
     s5.addText('Comparativo de Cancelamentos', { x: 0.4, y: 0.3, w: 9.2, h: 0.5, fontSize: 20, bold: true, color: corTitulo })
-    const rowsCancel = [['Loja', 'Cancel. Cliente', 'Cancel. Plataforma', 'Total'].map(t => ({ text: t, options: { bold: true, fill: corHeader } }))]
-    lojasRegiao.forEach(l => {
-      const dado = operacaoMensal.find(o => o.loja_id === l.id && o.mes === mesAtual)
-      const cliente = dado ? dado.cancel_cliente : 0
-      const plataforma = dado ? dado.cancel_plataforma : 0
-      rowsCancel.push([l.nome, String(cliente), String(plataforma), String(cliente + plataforma)])
-    })
-    s5.addTable(rowsCancel, { x: 0.4, y: 0.9, w: 9.2, fontSize: 11, autoPage: false })
+    const cancelPorLoja = lojasRegiao.map(l => {
+      const dadoAtual = operacaoMensal.find(o => o.loja_id === l.id && o.mes === mesAtual)
+      const dadoAnterior = operacaoMensal.find(o => o.loja_id === l.id && o.mes === mesAnterior)
+      const totalAtual = dadoAtual && dadoAtual.motivos_cancelamento ? dadoAtual.motivos_cancelamento.reduce((s, m) => s + m.quantidade, 0) : 0
+      const totalAnterior = dadoAnterior && dadoAnterior.motivos_cancelamento ? dadoAnterior.motivos_cancelamento.reduce((s, m) => s + m.quantidade, 0) : 0
+      return { nome: l.nome, totalAtual, totalAnterior }
+    }).sort((a, b) => b.totalAtual - a.totalAtual)
+
+    if (cancelPorLoja.some(c => c.totalAtual > 0 || c.totalAnterior > 0)) {
+      s5.addChart(pptx.ChartType.bar, [
+        { name: monthLabelShort(mesAnterior), labels: cancelPorLoja.map(c => c.nome), values: cancelPorLoja.map(c => c.totalAnterior) },
+        { name: monthLabelShort(mesAtual), labels: cancelPorLoja.map(c => c.nome), values: cancelPorLoja.map(c => c.totalAtual) }
+      ], {
+        x: 0.4, y: 0.9, w: 9.2, h: 4.3,
+        barDir: 'col', barGrouping: 'clustered',
+        showLegend: true, legendPos: 't',
+        showValue: true, dataLabelPosition: 'outEnd',
+        chartColors: ['7FA8C9', '1F3B57'],
+        catAxisLabelFontSize: 11, valAxisLabelFontSize: 10
+      })
+    } else {
+      s5.addText('Nenhum cancelamento registrado para este mês.', { x: 0.4, y: 1.0, w: 9.2, h: 1, fontSize: 13, color: '333333' })
+    }
 
     const s6 = pptx.addSlide()
     s6.addText('Motivos de Cancelamento', { x: 0.4, y: 0.3, w: 9.2, h: 0.5, fontSize: 20, bold: true, color: corTitulo })
-    let motivosTexto = ''
+    const motivosAgregados = {}
     lojasRegiao.forEach(l => {
       const dado = operacaoMensal.find(o => o.loja_id === l.id && o.mes === mesAtual)
-      if (dado && dado.motivos) motivosTexto += `${l.nome}: ${dado.motivos}\n\n`
+      if (dado && dado.motivos_cancelamento) {
+        dado.motivos_cancelamento.forEach(m => {
+          motivosAgregados[m.motivo] = (motivosAgregados[m.motivo] || 0) + m.quantidade
+        })
+      }
     })
-    s6.addText(motivosTexto || 'Nenhum motivo registrado para este mês.', { x: 0.4, y: 1.0, w: 9.2, h: 4, fontSize: 13, color: '333333' })
+    const motivosOrdenados = Object.entries(motivosAgregados).sort((a, b) => a[1] - b[1])
+
+    if (motivosOrdenados.length > 0) {
+      s6.addChart(pptx.ChartType.bar, [
+        { name: 'Motivos', labels: motivosOrdenados.map(m => m[0]), values: motivosOrdenados.map(m => m[1]) }
+      ], {
+        x: 0.4, y: 0.9, w: 9.2, h: 4.3,
+        barDir: 'bar',
+        showLegend: false,
+        showValue: true, dataLabelPosition: 'outEnd',
+        chartColors: ['4F81A9'],
+        catAxisLabelFontSize: 11, valAxisLabelFontSize: 10
+      })
+    } else {
+      s6.addText('Nenhum motivo de cancelamento registrado para este mês.', { x: 0.4, y: 1.0, w: 9.2, h: 1, fontSize: 13, color: '333333' })
+    }
 
     const s7 = pptx.addSlide()
     s7.addText('Dados de Operação — Tempo de Funcionamento', { x: 0.4, y: 0.3, w: 9.2, h: 0.5, fontSize: 18, bold: true, color: corTitulo })

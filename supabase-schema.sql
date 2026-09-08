@@ -53,9 +53,7 @@ create table if not exists operacao_mensal (
   id uuid primary key default gen_random_uuid(),
   loja_id uuid references lojas(id) on delete set null,
   mes text not null, -- formato 'YYYY-MM'
-  cancel_cliente integer default 0,
-  cancel_plataforma integer default 0,
-  motivos text,
+  motivos_cancelamento jsonb default '[]'::jsonb, -- [{ "motivo": "Item em falta", "quantidade": 12 }, ...]
   tempo_func text,
   tempo_pct numeric,
   log_entrega integer,
@@ -64,6 +62,12 @@ create table if not exists operacao_mensal (
   criado_em timestamptz default now(),
   unique (loja_id, mes)
 );
+alter table operacao_mensal add column if not exists motivos_cancelamento jsonb default '[]'::jsonb;
+-- As colunas antigas (cancel_cliente, cancel_plataforma, motivos) não são mais usadas pelo site;
+-- ficam no banco sem serem lidas ou escritas, e podem ser removidas manualmente se quiser:
+-- alter table operacao_mensal drop column if exists cancel_cliente;
+-- alter table operacao_mensal drop column if exists cancel_plataforma;
+-- alter table operacao_mensal drop column if exists motivos;
 
 alter table lojas enable row level security;
 alter table feedbacks enable row level security;
