@@ -33,13 +33,29 @@ export default function App() {
   }, [])
 
   const loadData = useCallback(async () => {
-    const [lojasRes, feedbacksRes, notasSecasRes, vendasRes, operacaoRes] = await Promise.all([
+    const results = await Promise.all([
       supabase.from('lojas').select('*').order('nome'),
       supabase.from('feedbacks').select('*').order('data', { ascending: false }),
       supabase.from('notas_secas').select('*'),
       supabase.from('vendas_diarias').select('*'),
       supabase.from('operacao_mensal').select('*')
     ])
+    const [lojasRes, feedbacksRes, notasSecasRes, vendasRes, operacaoRes] = results
+
+    const erros = results.filter(r => r.error)
+    if (erros.length > 0) {
+      console.error('Erro ao atualizar dados:', erros.map(e => e.error.message))
+      const sessaoExpirada = erros.some(e => /jwt|token|session/i.test(e.error.message || ''))
+      if (sessaoExpirada) {
+        alert('Sua sessão expirou. Você será desconectado — faça login novamente. Seus dados já salvos não foram apagados.')
+        await supabase.auth.signOut()
+        return
+      }
+      alert('Não consegui atualizar a lista agora (' + erros[0].error.message + '). O que você acabou de salvar não foi apagado — tente novamente em instantes ou recarregue a página.')
+      // Mantém os dados já exibidos em vez de zerar a tela.
+      return
+    }
+
     setLojas(lojasRes.data || [])
     setFeedbacks(feedbacksRes.data || [])
     setNotasSecas(notasSecasRes.data || [])
