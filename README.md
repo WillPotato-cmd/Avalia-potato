@@ -61,7 +61,7 @@ região) e geração de PowerPoint com o comparativo mensal completo.
   Sheets (colar as células copiadas).
 - **Operação mensal**: lançamento mensal de cancelamentos, tempo de
   funcionamento e logística, também com importação da planilha.
-- **Relatório PPTX**: gera um arquivo PowerPoint com o comparativo mensal
+- **Relatório PDF**: gera um arquivo PDF com o comparativo mensal
   completo (vendas iFood, vendas 99Food, investimento, cancelamentos, motivos,
   tempo de funcionamento, logística) por região, comparando o mês atual com o
   anterior e com o mesmo mês do ano passado.
