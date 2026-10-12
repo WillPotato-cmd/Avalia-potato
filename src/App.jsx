@@ -9,7 +9,7 @@ import RelatorioSemanal from './RelatorioSemanal'
 import PanoramaMensal from './PanoramaMensal'
 import VendasDiarias from './VendasDiarias'
 import OperacaoMensal from './OperacaoMensal'
-import RelatorioPPTX from './RelatorioPPTX'
+import RelatorioPDF from './RelatorioPDF'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -79,7 +79,7 @@ export default function App() {
     ['notastotais', 'Notas totais'],
     ['vendasdiarias', 'Vendas diárias'],
     ['opmensal', 'Operação mensal'],
-    ['pptx', 'Relatório PPTX']
+    ['pdf', 'Relatório PDF']
   ]
 
   return (
@@ -106,7 +106,7 @@ export default function App() {
       {tab === 'notastotais' && <NotasTotais lojas={lojas} feedbacks={feedbacks} notasSecas={notasSecas} />}
       {tab === 'vendasdiarias' && <VendasDiarias lojas={lojas} vendasDiarias={vendasDiarias} onChange={loadData} />}
       {tab === 'opmensal' && <OperacaoMensal lojas={lojas} operacaoMensal={operacaoMensal} onChange={loadData} />}
-      {tab === 'pptx' && <RelatorioPPTX lojas={lojas} vendasDiarias={vendasDiarias} operacaoMensal={operacaoMensal} />}
+      {tab === 'pdf' && <RelatorioPDF lojas={lojas} vendasDiarias={vendasDiarias} operacaoMensal={operacaoMensal} />}
     </div>
   )
 }
